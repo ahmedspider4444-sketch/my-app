@@ -1,1 +1,535 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>منصة الخصوصية الشاملة</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogItmF2YrYp9mE2Kkg2KfZhNiu2LbYr9ix2YrYp9mBIiwKICAic2hvcnRfbmFtZSI6ICLtirjYr9ix2YoiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBmMTcyYSIsCiAgInRoZW1lX2NvbG9yIjogIiMwZjE3MmEiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsJTNDc3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDEwMCAxMDAnJTNFJTNDcmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjMxZTI5M2InLyUzRSUzQ3RleHQgeD0nNTAnIHk9JzU1JyBmb250LXNpemU9JzQwJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmaWxsPSd3aGl0ZScgZm9udC1mYW1pbHk9J0FyaWFsJz7wn5SOPC90ZXh0JTNFJTNDL3N2ZyUzRSIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0KICBdCn0">
+    
+    <style>
+        :root {
+            --primary: #0f172a;
+            --primary-light: #1e293b;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --radius: 16px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 16px;
+            direction: rtl;
+        }
+        #lockScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            display: flex; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .lock-container {
+            background: white; border-radius: var(--radius); padding: 30px;
+            text-align: center; max-width: 320px; width: 90%;
+        }
+        .lock-container input { width: 100%; padding: 12px; margin: 16px 0; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem; text-align: center; }
+        .lock-container button { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        #mainApp { display: none; }
+        .container { max-width: 600px; margin: 0 auto; background: var(--card); border-radius: var(--radius); box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
+        .app-header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 20px 24px; text-align: center; }
+        .app-header h1 { font-size: 1.4rem; margin-bottom: 4px; }
+        .app-header p { font-size: 0.8rem; opacity: 0.8; }
+        .tabs { display: flex; background: #f1f5f9; border-bottom: 2px solid var(--border); overflow-x: auto; }
+        .tab-btn { flex: 1; padding: 14px 8px; background: transparent; border: none; font-size: 0.75rem; font-weight: 600; color: var(--text-light); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .tab-btn.active { color: var(--accent); background: white; }
+        .tab-btn.active::after { content: ''; display: block; height: 2px; background: var(--accent); }
+        .tab-content { display: none; padding: 20px; }
+        .tab-content.active { display: block; }
+        label { font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; display: block; }
+        textarea, input[type="text"], input[type="file"] { width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 10px; font-size: 0.95rem; background: #fafbfc; font-family: inherit; }
+        textarea { height: 100px; resize: vertical; }
+        .btn-group { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+        button { padding: 12px 20px; border: none; border-radius: 10px; font-weight: 600; font-size: 0.9rem; cursor: pointer; color: white; flex: 1; min-width: 80px; transition: 0.2s; }
+        button:active { transform: scale(0.97); }
+        .btn-enc { background: var(--accent); }
+        .btn-dec { background: var(--success); }
+        .btn-warning { background: var(--warning); color: #1e293b; }
+        .btn-copy { background: #64748b; }
+        .btn-gen { background: #8b5cf6; font-size: 0.8rem; padding: 6px 12px; min-width: auto; flex: 0; }
+        .result-box { background: #f1f5f9; border: 2px dashed var(--border); padding: 14px; border-radius: 10px; min-height: 50px; word-break: break-all; margin-top: 12px; font-family: monospace; direction: ltr; text-align: center; }
+        .timer-box { background: #fef3c7; color: #92400e; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: center; font-weight: bold; }
+        .file-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 25px; text-align: center; cursor: pointer; background: #fafbfc; }
+    </style>
+</head>
+<body>
 
+<div id="lockScreen">
+    <div class="lock-container">
+        <h2>🔐 القفل الرئيسي</h2>
+        <p style="font-size:0.9rem; color:#64748b;">أدخل كلمة السر لفتح التطبيق</p>
+        <input type="password" id="masterPassword" placeholder="كلمة السر الافتراضية: 1234">
+        <p style="font-size:0.8rem; color:var(--danger);" id="licenseWarning"></p>
+        <button onclick="unlockApp()">فتح</button>
+        <div id="licensePrompt" style="display:none; margin-top:15px;">
+            <input type="text" id="licenseKey" placeholder="أدخل كود الترخيص">
+            <button onclick="activateLicense()" style="background:#10b981; margin-top:4px;">تفعيل</button>
+        </div>
+    </div>
+</div>
+
+<div id="mainApp">
+    <div class="container">
+        <div class="app-header"><h1>🔐 منصة الخصوصية الشاملة</h1><p>جميع الميزات جاهزة</p></div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('text')">📝 النصوص</button>
+            <button class="tab-btn" onclick="switchTab('file')">📁 الملفات</button>
+            <button class="tab-btn" onclick="switchTab('handshake')">🤝 المصافحة</button>
+            <button class="tab-btn" onclick="switchTab('settings')">⚙️ الإعدادات</button>
+        </div>
+        <!-- تبويب النصوص -->
+        <div id="tab-text" class="tab-content active">
+            <label>🔑 المفتاح <button class="btn-gen" onclick="generatePassword('keyInput')">🎲 توليد</button></label>
+            <input type="text" id="keyInput" placeholder="أدخل كلمة السر...">
+            <label style="margin-top:12px;">📝 النص</label>
+            <textarea id="textInput" placeholder="اكتب النص هنا..."></textarea>
+            <div class="btn-group">
+                <button class="btn-enc" onclick="processText(true)">🔒 تشفير</button>
+                <button class="btn-dec" onclick="processText(false)">🔓 فك</button>
+                <button class="btn-warning" onclick="selfDestruct()">💣 تدمير ذاتي</button>
+            </div>
+            <div class="result-box" id="resultOutput">النتيجة تظهر هنا...</div>
+            <div id="timerDisplay" class="timer-box" style="display:none;"></div>
+            <button class="btn-copy" onclick="copyResult()" style="margin-top:8px; width:100%;">📋 نسخ</button>
+        </div>
+        <!-- تبويب الملفات -->
+        <div id="tab-file" class="tab-content">
+            <label>🔑 مفتاح الملف <button class="btn-gen" onclick="generatePassword('fileKey')">🎲 توليد</button></label>
+            <input type="text" id="fileKey" placeholder="أدخل كلمة السر...">
+            <div class="file-zone" onclick="document.getElementById('fileInput').click()"><p>📤 اضغط لاختيار ملف</p><p style="font-size:0.7rem; color:var(--text-light);">يدعم الملفات الضخمة</p></div>
+            <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(event)">
+            <p id="fileStatus" style="font-size:0.8rem; margin-top:6px;"></p>
+            <div class="btn-group">
+                <button class="btn-enc" onclick="encryptFile()">🔒 تشفير</button>
+                <button class="btn-dec" onclick="decryptFile()">🔓 فك</button>
+            </div>
+            <div class="result-box" id="fileResult">الملف الناتج...</div>
+        </div>
+        <!-- تبويب المصافحة -->
+        <div id="tab-handshake" class="tab-content">
+            <p style="margin-bottom:12px; color:var(--text-light);">أنشئ مفتاحاً مشتركاً دون إرساله.</p>
+            <label>🔢 Base</label><input type="text" id="baseCode" placeholder="يظهر تلقائياً">
+            <label>🔒 Public A</label><input type="text" id="publicA" placeholder="يظهر تلقائياً">
+            <label>🔓 Public B</label><input type="text" id="publicB" placeholder="ألصقه هنا">
+            <div class="btn-group">
+                <button class="btn-warning" onclick="startHandshake()">⚡ بدء</button>
+                <button class="btn-warning" onclick="joinHandshake()">📥 انضمام</button>
+                <button class="btn-warning" onclick="confirmKey()">🔑 تأكيد</button>
+            </div>
+            <p id="handshakeStatus" style="font-size:0.8rem; margin-top:8px; color:var(--text-light);"></p>
+        </div>
+        <!-- تبويب الإعدادات -->
+        <div id="tab-settings" class="tab-content">
+            <label>🔐 تغيير كلمة سر القفل الرئيسي</label>
+            <input type="password" id="newPassword" placeholder="كلمة سر جديدة">
+            <input type="password" id="confirmPassword" placeholder="تأكيد كلمة السر الجديدة" style="margin-top:8px;">
+            <div style="display:flex; gap:10px; margin-top:12px;">
+                <button class="btn-enc" onclick="changeMasterPassword()" style="flex:1;">💾 حفظ</button>
+                <button class="btn-copy" onclick="clearPasswordFields()" style="flex:0.5; background:#94a3b8;">🗑️ مسح</button>
+            </div>
+            <p id="settingsMsg" style="font-size:0.8rem; margin-top:12px; color:var(--text-light);"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ====================== الإعدادات ======================
+    const alphabet = " أبتثجحخدذرزسشصضطظعغفقكلمنهويةءئؤإأآلالإلأآًٌٍَُِّْ0123456789";
+    const N = alphabet.length;
+    const MASTER_KEY = "Khaled2024Secure!";
+    let masterPassword = "1234";
+    const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 ميجابايت للحد الأقصى
+    const MAX_USES = 30;
+    const CSV_URL = "YOUR_CSV_URL"; // استبدله برابط ملف CSV المنشور من Google Sheets
+
+    let selfDestructTimer = null;
+    let selectedFileData = null, selectedFileName = "";
+    let secretA = null, secretB = null, baseV = null;
+
+    // ====================== العداد المحلي ======================
+    function getUsageData() {
+        const raw = localStorage.getItem('usageData');
+        if (!raw) return null;
+        try {
+            let dec = "";
+            for (let i = 0; i < raw.length; i++) {
+                let cp = alphabet.indexOf(raw[i]);
+                if (cp === -1) return null;
+                let kp = alphabet.indexOf(MASTER_KEY[i % MASTER_KEY.length]);
+                if (kp === -1) kp = 1;
+                dec += alphabet[((cp - kp + N) % N)];
+            }
+            const parts = dec.split("|");
+            if (parts.length !== 2) return null;
+            return parseInt(parts[0]);
+        } catch (e) { return null; }
+    }
+
+    function saveUsageData(count) {
+        const plain = count + "|" + navigator.userAgent.substring(0, 20);
+        let enc = "";
+        for (let i = 0; i < plain.length; i++) {
+            let cp = alphabet.indexOf(plain[i]); if (cp === -1) cp = 0;
+            let kp = alphabet.indexOf(MASTER_KEY[i % MASTER_KEY.length]); if (kp === -1) kp = 1;
+            enc += alphabet[((cp + kp) % N)];
+        }
+        localStorage.setItem('usageData', enc);
+    }
+
+    function getRemainingUses() {
+        let count = getUsageData();
+        return count !== null ? count : MAX_USES;
+    }
+
+    function decrementUsage() {
+        let count = getUsageData();
+        if (count === null) count = MAX_USES;
+        if (count > 0) saveUsageData(count - 1);
+        return count - 1;
+    }
+
+    // ====================== ترخيص أونلاين ======================
+    function isLicenseStored() {
+        const lic = localStorage.getItem('validLicense');
+        if (!lic) return false;
+        try {
+            const parts = lic.split("|");
+            const expiry = new Date(parts[1]);
+            return new Date() <= expiry;
+        } catch (e) { return false; }
+    }
+
+    async function checkLicenseOnline(code) {
+        try {
+            const response = await fetch(CSV_URL);
+            const csv = await response.text();
+            const rows = csv.trim().split("\n");
+            for (let i = 1; i < rows.length; i++) {
+                const cols = rows[i].split(",");
+                if (cols.length < 3) continue;
+                const c = cols[0].trim();
+                const exp = cols[1].trim();
+                const act = cols[2].trim().toUpperCase();
+                if (c === code && act === "TRUE" && new Date(exp) >= new Date()) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (err) {
+            console.log("فشل الاتصال بالخادم");
+            return null;
+        }
+    }
+
+    async function activateLicense() {
+        const code = document.getElementById('licenseKey').value.trim();
+        if (!code) return alert("أدخل كود الترخيص!");
+        const valid = await checkLicenseOnline(code);
+        if (valid === true) {
+            const expiry = "2099-12-31";
+            localStorage.setItem('validLicense', code + "|" + expiry);
+            alert("✅ تم تفعيل الترخيص!");
+            document.getElementById('licensePrompt').style.display = 'none';
+            document.getElementById('licenseWarning').innerText = "مرخص";
+            openMainApp();
+        } else if (valid === false) {
+            alert("❌ كود غير صالح أو منتهي الصلاحية.");
+        } else {
+            alert("⚠️ لا يوجد اتصال. تعذر التحقق.");
+        }
+    }
+
+    // ====================== فتح التطبيق ======================
+    function unlockApp() {
+        const entered = document.getElementById('masterPassword').value;
+        if (entered !== masterPassword) { alert("❌ كلمة السر غير صحيحة"); return; }
+
+        if (isLicenseStored()) {
+            document.getElementById('licenseWarning').innerText = "مرخص";
+            openMainApp();
+            return;
+        }
+
+        const remaining = getRemainingUses();
+        if (remaining > 0) {
+            decrementUsage();
+            document.getElementById('licenseWarning').innerText = `المرات المتبقية: ${remaining - 1}`;
+            openMainApp();
+            return;
+        }
+
+        document.getElementById('licensePrompt').style.display = 'block';
+        document.getElementById('licenseWarning').innerText = "انتهت الصلاحية. أدخل كود الترخيص.";
+    }
+
+    function openMainApp() {
+        document.getElementById('lockScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        if (masterPassword === "1234") {
+            setTimeout(() => alert("⚠️ كلمة المرور الافتراضية لا تزال 1234."), 500);
+        }
+    }
+
+    // ====================== كلمة السر ======================
+    function loadMasterPassword() {
+        const encrypted = localStorage.getItem('encryptedMasterPassword');
+        if (!encrypted) return "1234";
+        try {
+            let dec = "";
+            for (let i = 0; i < encrypted.length; i++) {
+                let cp = alphabet.indexOf(encrypted[i]);
+                if (cp === -1) return "1234";
+                let kp = alphabet.indexOf(MASTER_KEY[i % MASTER_KEY.length]);
+                if (kp === -1) kp = 1;
+                dec += alphabet[((cp - kp + N) % N)];
+            }
+            return dec;
+        } catch (e) { return "1234"; }
+    }
+
+    function saveMasterPassword(password) {
+        let enc = "";
+        for (let i = 0; i < password.length; i++) {
+            let cp = alphabet.indexOf(password[i]);
+            if (cp === -1) cp = 0;
+            let kp = alphabet.indexOf(MASTER_KEY[i % MASTER_KEY.length]);
+            if (kp === -1) kp = 1;
+            enc += alphabet[((cp + kp) % N)];
+        }
+        localStorage.setItem('encryptedMasterPassword', enc);
+    }
+
+    masterPassword = loadMasterPassword();
+
+    function changeMasterPassword() {
+        const newPass = document.getElementById('newPassword').value;
+        const confirmPass = document.getElementById('confirmPassword').value;
+        const msg = document.getElementById('settingsMsg');
+        if (!newPass || !confirmPass) { msg.innerText = "❌ يرجى ملء الحقلين."; return; }
+        if (newPass !== confirmPass) { msg.innerText = "❌ غير متطابقتين."; return; }
+        if (newPass.length < 4) { msg.innerText = "❌ 4 أحرف على الأقل."; return; }
+        masterPassword = newPass;
+        saveMasterPassword(newPass);
+        msg.innerText = "✅ تم تغيير كلمة السر.";
+        clearPasswordFields();
+        setTimeout(() => { msg.innerText = ""; }, 3000);
+    }
+
+    function clearPasswordFields() {
+        document.getElementById('newPassword').value = "";
+        document.getElementById('confirmPassword').value = "";
+        document.getElementById('settingsMsg').innerText = "";
+    }
+
+    // ====================== دوال مساعدة ======================
+    function generatePassword(id) {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+        let p = ""; for (let i = 0; i < 16; i++) p += chars[Math.floor(Math.random() * chars.length)];
+        document.getElementById(id).value = p;
+    }
+    function generateSalt() { return Math.floor(1000 + Math.random() * 9000).toString(); }
+
+    function copyResult() {
+        const t = document.getElementById('resultOutput').innerText;
+        if (!t || t === "النتيجة تظهر هنا...") return;
+        if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => alert("تم النسخ!"));
+        else alert("انسخ يدوياً: " + t);
+    }
+
+    // ====================== تشفير النصوص ======================
+    function processText(isEnc, expiryMinutes = null) {
+        const text = document.getElementById('textInput').value;
+        const key = document.getElementById('keyInput').value.trim();
+        const out = document.getElementById('resultOutput');
+        if (!key) { alert("أدخل المفتاح!"); return; }
+
+        if (isEnc) {
+            if (text.length === 0) { alert("اكتب نصاً."); return; }
+            let payload = text;
+            if (expiryMinutes && expiryMinutes > 0) {
+                const expiryTime = new Date(Date.now() + expiryMinutes * 60 * 1000);
+                const timestamp = expiryTime.getTime().toString();
+                payload = "EXPIRES:" + timestamp + "|" + text;
+            }
+            const salt = generateSalt();
+            const full = salt + payload;
+            let res = []; let ki = 0;
+            for (let c of full) {
+                let cp = alphabet.indexOf(c); if (cp === -1) cp = 0;
+                let kp = alphabet.indexOf(key[ki % key.length]); if (kp === -1) kp = 1;
+                res.push(((cp + kp) % N) + 1); ki++;
+            }
+            out.innerText = res.join("-");
+        } else {
+            let parts = text.trim().split("-");
+            let o = ""; let ki = 0;
+            for (let p of parts) {
+                let num = parseInt(p);
+                if (!isNaN(num) && num > 0) {
+                    let cp = num - 1;
+                    let kp = alphabet.indexOf(key[ki % key.length]); if (kp === -1) kp = 1;
+                    o += alphabet[((cp - kp + N) % N)]; ki++;
+                } else o += " ";
+            }
+            if (o.trim() === "") { alert("نص غير مشفر."); return; }
+            o = o.length >= 4 ? o.substring(4) : "خطأ";
+            // معالجة الصلاحية (التدمير الذاتي)
+            if (o.startsWith("EXPIRES:")) {
+                const parts = o.split("|");
+                if (parts.length >= 2) {
+                    const timestamp = parseInt(parts[0].substring(8));
+                    if (!isNaN(timestamp) && Date.now() > timestamp) {
+                        out.innerText = "⏳ انتهت صلاحية هذه الرسالة.";
+                        return;
+                    }
+                    o = parts.slice(1).join("|");
+                }
+            }
+            out.innerText = o;
+        }
+        clearTimer();
+    }
+
+    // ====================== تدمير ذاتي ======================
+    function selfDestruct() {
+        const key = document.getElementById('keyInput').value.trim();
+        if (!key) { alert("أدخل المفتاح!"); return; }
+        const minutes = parseFloat(prompt("عدد الدقائق (الافتراضي 5):", "5"));
+        if (isNaN(minutes) || minutes <= 0) return;
+        processText(true, minutes);
+        const sec = Math.round(minutes * 60);
+        const timer = document.getElementById('timerDisplay');
+        timer.style.display = 'block'; let remaining = sec;
+        const tick = () => {
+            const mins = Math.floor(remaining / 60);
+            const secs = (remaining % 60).toString().padStart(2, '0');
+            timer.textContent = `⏳ تدمير العرض خلال ${mins}:${secs}`;
+            if (remaining <= 0) {
+                clearInterval(selfDestructTimer);
+                document.getElementById('resultOutput').innerText = "💥 تم مسح الرسالة";
+                timer.style.display = 'none';
+            }
+            remaining--;
+        };
+        tick();
+        selfDestructTimer = setInterval(tick, 1000);
+    }
+
+    function clearTimer() {
+        if (selfDestructTimer) { clearInterval(selfDestructTimer); selfDestructTimer = null; }
+        document.getElementById('timerDisplay').style.display = 'none';
+    }
+
+    // ====================== تشفير الملفات ======================
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > MAX_FILE_SIZE) { alert("❌ حجم الملف أكبر من 500 ميجابايت."); e.target.value = ""; return; }
+        selectedFileName = file.name;
+        document.getElementById('fileStatus').innerText = `✅ ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`;
+        const reader = new FileReader();
+        reader.onload = ev => selectedFileData = new Uint8Array(ev.target.result);
+        reader.readAsArrayBuffer(file);
+    }
+    function xorData(data, key) { const kb = new TextEncoder().encode(key); return data.map((b, i) => b ^ kb[i % kb.length]); }
+    function downloadBlob(dataArray, fileName) {
+        const blob = new Blob([dataArray]);
+        const reader = new FileReader();
+        reader.onload = function() {
+            const a = document.createElement('a');
+            a.href = reader.result; a.download = fileName;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        };
+        reader.readAsDataURL(blob);
+    }
+    function encryptFile() {
+        if (!selectedFileData) { alert("اختر ملفاً!"); return; }
+        const key = document.getElementById('fileKey').value.trim();
+        if (!key) { alert("أدخل المفتاح!"); return; }
+        const enc = xorData(selectedFileData, key);
+        let outputName = selectedFileName + ".enc";
+        downloadBlob(enc, outputName);
+        document.getElementById('fileResult').innerText = "✅ تم تشفير الملف: " + outputName;
+    }
+    function decryptFile() {
+        if (!selectedFileData) { alert("اختر ملفاً!"); return; }
+        const key = document.getElementById('fileKey').value.trim();
+        if (!key) { alert("أدخل المفتاح!"); return; }
+        try {
+            const dec = xorData(selectedFileData, key);
+            let originalName = selectedFileName;
+            if (originalName.endsWith(".enc")) originalName = originalName.slice(0, -4);
+            else originalName = "decrypted_" + originalName;
+            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+            if (imageExtensions.some(ext => originalName.toLowerCase().endsWith(ext))) {
+                const blob = new Blob([dec]); const url = URL.createObjectURL(blob); const img = new Image();
+                img.onload = () => { window.open(url, '_blank'); document.getElementById('fileResult').innerText = "✅ تم عرض الصورة."; };
+                img.onerror = () => { alert("❌ فشل."); document.getElementById('fileResult').innerText = "❌ فشل."; };
+                img.src = url;
+            } else {
+                downloadBlob(dec, originalName);
+                document.getElementById('fileResult').innerText = "✅ تم تنزيل الملف: " + originalName;
+            }
+        } catch (e) { alert("❌ خطأ."); document.getElementById('fileResult').innerText = "❌ فشل."; }
+    }
+
+    // ====================== المصافحة ======================
+    function rand() { return Math.floor(Math.random() * 10000) + 1000; }
+    function computePublic(b, s) { return (b + s) % N; }
+    function computeShared(p, s) { return (p + s) % N; }
+    function startHandshake() {
+        secretA = rand(); baseV = rand();
+        document.getElementById('baseCode').value = baseV;
+        document.getElementById('publicA').value = computePublic(baseV, secretA);
+        document.getElementById('handshakeStatus').innerText = "✅ أرسل Base + Public A.";
+    }
+    function joinHandshake() {
+        const base = parseInt(document.getElementById('baseCode').value);
+        const pubA = parseInt(document.getElementById('publicA').value);
+        if (isNaN(base) || isNaN(pubA)) { alert("أدخل Base و Public A!"); return; }
+        secretB = rand(); const pubB = computePublic(base, secretB);
+        document.getElementById('publicB').value = pubB;
+        document.getElementById('keyInput').value = computeShared(pubA, secretB);
+        document.getElementById('handshakeStatus').innerText = "✅ تم. المفتاح في النصوص.";
+    }
+    function confirmKey() {
+        if (secretA === null || baseV === null) { alert("ابدأ المصافحة!"); return; }
+        const pubB = parseInt(document.getElementById('publicB').value);
+        if (isNaN(pubB)) { alert("أدخل Public B!"); return; }
+        document.getElementById('keyInput').value = computeShared(pubB, secretA);
+        document.getElementById('handshakeStatus').innerText = "🎉 تم التأكيد!";
+    }
+
+    function switchTab(name) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    window.onload = function() {
+        document.getElementById('lockScreen').style.display = 'flex';
+        document.getElementById('mainApp').style.display = 'none';
+    };
+</script>
+</body>
+  </html>
