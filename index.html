@@ -49,16 +49,7 @@
         .app-header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 20px 24px; text-align: center; }
         .app-header h1 { font-size: 1.4rem; margin-bottom: 4px; }
         .app-header p { font-size: 0.8rem; opacity: 0.8; }
-        /* عداد الأيام - صامت وغير مزعج */
-        .days-counter {
-            background: rgba(255,255,255,0.15);
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            display: inline-block;
-            margin-top: 8px;
-        }
+        .days-counter { background: rgba(255,255,255,0.15); color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; display: inline-block; margin-top: 8px; }
         .tabs { display: flex; background: #f1f5f9; border-bottom: 2px solid var(--border); overflow-x: auto; }
         .tab-btn { flex: 1; padding: 14px 8px; background: transparent; border: none; font-size: 0.75rem; font-weight: 600; color: var(--text-light); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
         .tab-btn.active { color: var(--accent); background: white; }
@@ -86,7 +77,7 @@
 <div id="lockScreen">
     <div class="lock-container">
         <h2>🔐 تفعيل الترخيص</h2>
-        <p style="font-size:0.9rem; color:#64748b;">أدخل كود التفعيل لمرة واحدة</p>
+        <p style="font-size:0.9rem; color:#64748b;">أدخل كود التفعيل</p>
         <input type="text" id="activationCode" placeholder="كود التفعيل">
         <button onclick="activateLicense()">تفعيل</button>
         <p style="font-size:0.8rem; color:var(--danger); margin-top:8px;" id="activationError"></p>
@@ -98,7 +89,6 @@
         <div class="app-header">
             <h1>🔐 منصة الخصوصية الشاملة</h1>
             <p>جميع الميزات جاهزة</p>
-            <!--عداد الأيام الصامت -->
             <div id="daysCounter" class="days-counter"></div>
         </div>
         <div class="tabs">
@@ -170,8 +160,10 @@
     // ====================== الإعدادات ======================
     const alphabet = " أبتثجحخدذرزسشصضطظعغفقكلمنهويةءئؤإأآلالإلأآًٌٍَُِّْ0123456789";
     const N = alphabet.length;
-    // !!! غيّر هذا إلى مفتاحك السري الخاص !!!
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // غيّر هذا المفتاح إلى مفتاح سري خاص بك ولا تشاركه مع أحد
     const MASTER_KEY = "MySecretKey2024!@#$";
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     let masterPassword = "1234";
     const MAX_FILE_SIZE = 500 * 1024 * 1024;
 
@@ -179,7 +171,7 @@
     let selectedFileData = null, selectedFileName = "";
     let secretA = null, secretB = null, baseV = null;
 
-    // ====================== نظام الترخيص ======================
+    // ====================== ترخيص محلي 100% (بدون إنترنت) ======================
     function getLicenseData() {
         const data = localStorage.getItem('licenseData');
         return data ? JSON.parse(data) : null;
@@ -212,15 +204,18 @@
         return Math.ceil(diff / (1000 * 60 * 60 * 24));
     }
 
+    // التحقق من الكود الجديد (يدعم salt)
     function verifyCode(code) {
-        if (!code || code.length < 20) return false;
+        if (!code || code.length < 24) return false;
         try {
             const daysPart = code.substring(0, 4);
-            const hashPart = code.substring(4);
+            const salt = code.substring(4, 8);
+            const hashPart = code.substring(8);
             const days = parseInt(daysPart, 36);
             if (isNaN(days) || days <= 0) return false;
 
-            const combined = days + "|" + MASTER_KEY;
+            // إعادة بناء الهاش باستخدام المفتاح والملح
+            const combined = days + "|" + MASTER_KEY + "|" + salt;
             let hash = 0;
             for (let i = 0; i < combined.length; i++) {
                 hash = ((hash << 5) - hash) + combined.charCodeAt(i);
@@ -539,7 +534,6 @@
             document.getElementById('mainApp').style.display = 'block';
             updateDaysCounter();
             updateButtons();
-            // إذا انتهت الصلاحية، أظهر النافذة مرة واحدة عند الفتح
             if (!isLicenseValid()) {
                 alert("انتهى اشتراكك. تواصل مع الدعم للتجديد.");
             }
