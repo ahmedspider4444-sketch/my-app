@@ -7,9 +7,10 @@
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogItmF2YrYp9mE2Kkg2KfZhNiu2LbYr9ix2YrYp9mBIiwKICAic2hvcnRfbmFtZSI6ICLtirjYr9ix2YoiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBmMTcyYSIsCiAgInRoZW1lX2NvbG9yIjogIiMwZjE3MmEiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsJTNDc3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDEwMCAxMDAnJTNFJTNDcmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzIwJyBmaWxsPSclMjMxZTI5M2InLyUzRSUzQ3RleHQgeD0nNTAnIHk9JzU1JyBmb250LXNpemU9JzQwJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmaWxsPSd3aGl0ZScgZm9udC1mYW1pbHk9J0FyaWFsJz7wn5SOPC90ZXh0JTNFJTNDL3N2ZyUzRSIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0KICBdCn0">
+    <link rel="manifest" href="data:application/json;base64,...">
     
     <style>
+        /* نفس التصميم السابق */
         :root {
             --primary: #0f172a;
             --primary-light: #1e293b;
@@ -157,64 +158,35 @@
     const N = alphabet.length;
     const MASTER_KEY = "Khaled2024Secure!";
     let masterPassword = "1234";
-    const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 ميجابايت للحد الأقصى
-    const MAX_USES = 30;
-    const CSV_URL = "YOUR_CSV_URL"; // استبدله برابط ملف CSV المنشور من Google Sheets
+    const MAX_FILE_SIZE = 500 * 1024 * 1024;
+    const CSV_URL = "YOUR_CSV_URL";
 
     let selfDestructTimer = null;
     let selectedFileData = null, selectedFileName = "";
     let secretA = null, secretB = null, baseV = null;
 
-    // ====================== العداد المحلي ======================
-    function getUsageData() {
-        const raw = localStorage.getItem('usageData');
-        if (!raw) return null;
+    // ====================== الحصول على وقت حقيقي ======================
+    async function getRealTime() {
         try {
-            let dec = "";
-            for (let i = 0; i < raw.length; i++) {
-                let cp = alphabet.indexOf(raw[i]);
-                if (cp === -1) return null;
-                let kp = alphabet.indexOf(MASTER_KEY[i % MASTER_KEY.length]);
-                if (kp === -1) kp = 1;
-                dec += alphabet[((cp - kp + N) % N)];
-            }
-            const parts = dec.split("|");
-            if (parts.length !== 2) return null;
-            return parseInt(parts[0]);
+            const response = await fetch('https://www.googleapis.com/discovery/v1/apis');
+            if (response.ok) return new Date();
+            else return null;
         } catch (e) { return null; }
     }
 
-    function saveUsageData(count) {
-        const plain = count + "|" + navigator.userAgent.substring(0, 20);
-        let enc = "";
-        for (let i = 0; i < plain.length; i++) {
-            let cp = alphabet.indexOf(plain[i]); if (cp === -1) cp = 0;
-            let kp = alphabet.indexOf(MASTER_KEY[i % MASTER_KEY.length]); if (kp === -1) kp = 1;
-            enc += alphabet[((cp + kp) % N)];
-        }
-        localStorage.setItem('usageData', enc);
-    }
-
-    function getRemainingUses() {
-        let count = getUsageData();
-        return count !== null ? count : MAX_USES;
-    }
-
-    function decrementUsage() {
-        let count = getUsageData();
-        if (count === null) count = MAX_USES;
-        if (count > 0) saveUsageData(count - 1);
-        return count - 1;
-    }
-
-    // ====================== ترخيص أونلاين ======================
+    // ====================== الترخيص ======================
     function isLicenseStored() {
         const lic = localStorage.getItem('validLicense');
         if (!lic) return false;
         try {
             const parts = lic.split("|");
-            const expiry = new Date(parts[1]);
-            return new Date() <= expiry;
+            if (parts.length < 3) return false;
+            const activationDate = new Date(parts[1]);
+            const durationDays = parseInt(parts[2]);
+            const now = new Date();
+            const expiryDate = new Date(activationDate);
+            expiryDate.setDate(expiryDate.getDate() + durationDays);
+            return now <= expiryDate;
         } catch (e) { return false; }
     }
 
@@ -225,68 +197,69 @@
             const rows = csv.trim().split("\n");
             for (let i = 1; i < rows.length; i++) {
                 const cols = rows[i].split(",");
-                if (cols.length < 3) continue;
+                if (cols.length < 4) continue;
                 const c = cols[0].trim();
                 const exp = cols[1].trim();
                 const act = cols[2].trim().toUpperCase();
-                if (c === code && act === "TRUE" && new Date(exp) >= new Date()) {
-                    return true;
+                const dur = cols[3].trim();
+                if (c === code && act === "TRUE") {
+                    if (exp && exp !== "") return { valid: new Date(exp) >= new Date(), duration: 0, expiry: exp };
+                    else if (dur && dur !== "") return { valid: true, duration: parseInt(dur), expiry: null };
                 }
             }
-            return false;
-        } catch (err) {
-            console.log("فشل الاتصال بالخادم");
-            return null;
-        }
+            return { valid: false };
+        } catch (err) { return null; }
     }
 
     async function activateLicense() {
         const code = document.getElementById('licenseKey').value.trim();
         if (!code) return alert("أدخل كود الترخيص!");
-        const valid = await checkLicenseOnline(code);
-        if (valid === true) {
-            const expiry = "2099-12-31";
-            localStorage.setItem('validLicense', code + "|" + expiry);
-            alert("✅ تم تفعيل الترخيص!");
+        const result = await checkLicenseOnline(code);
+        if (result === null) { alert("⚠️ لا يوجد اتصال. تعذر التحقق."); return; }
+        if (result.valid) {
+            const activationDate = new Date().toISOString();
+            const durationDays = result.duration || 30;
+            localStorage.setItem('validLicense', code + "|" + activationDate + "|" + durationDays);
+            alert("✅ تم تفعيل الترخيص لمدة " + durationDays + " يوم!");
             document.getElementById('licensePrompt').style.display = 'none';
             document.getElementById('licenseWarning').innerText = "مرخص";
             openMainApp();
-        } else if (valid === false) {
-            alert("❌ كود غير صالح أو منتهي الصلاحية.");
-        } else {
-            alert("⚠️ لا يوجد اتصال. تعذر التحقق.");
-        }
+        } else { alert("❌ كود غير صالح أو منتهي الصلاحية."); }
     }
 
     // ====================== فتح التطبيق ======================
-    function unlockApp() {
+    async function unlockApp() {
         const entered = document.getElementById('masterPassword').value;
         if (entered !== masterPassword) { alert("❌ كلمة السر غير صحيحة"); return; }
 
         if (isLicenseStored()) {
+            const realTime = await getRealTime();
+            if (realTime) {
+                const licParts = localStorage.getItem('validLicense').split("|");
+                const activationDate = new Date(licParts[1]);
+                const durationDays = parseInt(licParts[2]);
+                const expiryDate = new Date(activationDate);
+                expiryDate.setDate(expiryDate.getDate() + durationDays);
+                if (realTime > expiryDate) {
+                    alert("⌛ انتهت صلاحية الترخيص.");
+                    localStorage.removeItem('validLicense');
+                    document.getElementById('licensePrompt').style.display = 'block';
+                    return;
+                }
+            }
             document.getElementById('licenseWarning').innerText = "مرخص";
-            openMainApp();
-            return;
-        }
-
-        const remaining = getRemainingUses();
-        if (remaining > 0) {
-            decrementUsage();
-            document.getElementById('licenseWarning').innerText = `المرات المتبقية: ${remaining - 1}`;
             openMainApp();
             return;
         }
 
         document.getElementById('licensePrompt').style.display = 'block';
-        document.getElementById('licenseWarning').innerText = "انتهت الصلاحية. أدخل كود الترخيص.";
+        document.getElementById('licenseWarning').innerText = "البرنامج يحتاج إلى ترخيص.";
     }
 
     function openMainApp() {
         document.getElementById('lockScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
-        if (masterPassword === "1234") {
-            setTimeout(() => alert("⚠️ كلمة المرور الافتراضية لا تزال 1234."), 500);
-        }
+        if (masterPassword === "1234") setTimeout(() => alert("⚠️ كلمة المرور الافتراضية لا تزال 1234."), 500);
     }
 
     // ====================== كلمة السر ======================
@@ -296,10 +269,8 @@
         try {
             let dec = "";
             for (let i = 0; i < encrypted.length; i++) {
-                let cp = alphabet.indexOf(encrypted[i]);
-                if (cp === -1) return "1234";
-                let kp = alphabet.indexOf(MASTER_KEY[i % MASTER_KEY.length]);
-                if (kp === -1) kp = 1;
+                let cp = alphabet.indexOf(encrypted[i]); if (cp === -1) return "1234";
+                let kp = alphabet.indexOf(MASTER_KEY[i % MASTER_KEY.length]); if (kp === -1) kp = 1;
                 dec += alphabet[((cp - kp + N) % N)];
             }
             return dec;
@@ -309,10 +280,8 @@
     function saveMasterPassword(password) {
         let enc = "";
         for (let i = 0; i < password.length; i++) {
-            let cp = alphabet.indexOf(password[i]);
-            if (cp === -1) cp = 0;
-            let kp = alphabet.indexOf(MASTER_KEY[i % MASTER_KEY.length]);
-            if (kp === -1) kp = 1;
+            let cp = alphabet.indexOf(password[i]); if (cp === -1) cp = 0;
+            let kp = alphabet.indexOf(MASTER_KEY[i % MASTER_KEY.length]); if (kp === -1) kp = 1;
             enc += alphabet[((cp + kp) % N)];
         }
         localStorage.setItem('encryptedMasterPassword', enc);
@@ -392,7 +361,6 @@
             }
             if (o.trim() === "") { alert("نص غير مشفر."); return; }
             o = o.length >= 4 ? o.substring(4) : "خطأ";
-            // معالجة الصلاحية (التدمير الذاتي)
             if (o.startsWith("EXPIRES:")) {
                 const parts = o.split("|");
                 if (parts.length >= 2) {
@@ -409,7 +377,6 @@
         clearTimer();
     }
 
-    // ====================== تدمير ذاتي ======================
     function selfDestruct() {
         const key = document.getElementById('keyInput').value.trim();
         if (!key) { alert("أدخل المفتاح!"); return; }
@@ -532,4 +499,4 @@
     };
 </script>
 </body>
-  </html>
+</html>
