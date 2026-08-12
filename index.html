@@ -51,7 +51,7 @@
         .app-header p { font-size: 0.8rem; opacity: 0.8; }
         .days-counter { background: rgba(255,255,255,0.15); color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; display: inline-block; margin-top: 8px; }
         .tabs { display: flex; background: #f1f5f9; border-bottom: 2px solid var(--border); overflow-x: auto; }
-        .tab-btn { flex: 1; padding: 14px 8px; background: transparent; border: none; font-size: 0.75rem; font-weight: 600; color: var(--text-light); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .tab-btn { flex: 1; padding: 14px 8px; background: transparent; border: none; font-size: 0.7rem; font-weight: 600; color: var(--text-light); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
         .tab-btn.active { color: var(--accent); background: white; }
         .tab-btn.active::after { content: ''; display: block; height: 2px; background: var(--accent); }
         .tab-content { display: none; padding: 20px; }
@@ -97,6 +97,7 @@
             <button class="tab-btn" onclick="switchTab('handshake')">🤝 المصافحة</button>
             <button class="tab-btn" onclick="switchTab('settings')">⚙️ الإعدادات</button>
         </div>
+
         <!-- تبويب النصوص -->
         <div id="tab-text" class="tab-content active">
             <label>🔑 المفتاح <button class="btn-gen" onclick="generatePassword('keyInput')">🎲 توليد</button></label>
@@ -112,6 +113,7 @@
             <div id="timerDisplay" class="timer-box" style="display:none;"></div>
             <button class="btn-copy" onclick="copyResult()" style="margin-top:8px; width:100%;">📋 نسخ</button>
         </div>
+
         <!-- تبويب الملفات -->
         <div id="tab-file" class="tab-content">
             <label>🔑 مفتاح الملف <button class="btn-gen" onclick="generatePassword('fileKey')">🎲 توليد</button></label>
@@ -125,9 +127,10 @@
             </div>
             <div class="result-box" id="fileResult">الملف الناتج...</div>
         </div>
+
         <!-- تبويب المصافحة -->
         <div id="tab-handshake" class="tab-content">
-            <p style="margin-bottom:12px; color:var(--text-light);">أنشئ مفتاحاً مشتركاً دون إرساله.</p>
+            <p style="margin-bottom:12px; color:var(--text-light);">أنشئ مفتاحاً مشتركاً دون إرساله. سيتم نقله تلقائياً إلى تبويب النصوص.</p>
             <label>🔢 Base</label><input type="text" id="baseCode" placeholder="يظهر تلقائياً">
             <label>🔒 Public A</label><input type="text" id="publicA" placeholder="يظهر تلقائياً">
             <label>🔓 Public B</label><input type="text" id="publicB" placeholder="ألصقه هنا">
@@ -138,6 +141,7 @@
             </div>
             <p id="handshakeStatus" style="font-size:0.8rem; margin-top:8px; color:var(--text-light);"></p>
         </div>
+
         <!-- تبويب الإعدادات -->
         <div id="tab-settings" class="tab-content">
             <label>🔐 تغيير كلمة سر القفل الرئيسي</label>
@@ -160,10 +164,7 @@
     // ====================== الإعدادات ======================
     const alphabet = " أبتثجحخدذرزسشصضطظعغفقكلمنهويةءئؤإأآلالإلأآًٌٍَُِّْ0123456789";
     const N = alphabet.length;
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // غيّر هذا المفتاح إلى مفتاح سري خاص بك ولا تشاركه مع أحد
     const MASTER_KEY = "MySecretKey2024!@#$";
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     let masterPassword = "1234";
     const MAX_FILE_SIZE = 500 * 1024 * 1024;
 
@@ -171,16 +172,12 @@
     let selectedFileData = null, selectedFileName = "";
     let secretA = null, secretB = null, baseV = null;
 
-    // ====================== ترخيص محلي 100% (بدون إنترنت) ======================
+    // ====================== الترخيص المحلي ======================
     function getLicenseData() {
         const data = localStorage.getItem('licenseData');
         return data ? JSON.parse(data) : null;
     }
-
-    function saveLicenseData(data) {
-        localStorage.setItem('licenseData', JSON.stringify(data));
-    }
-
+    function saveLicenseData(data) { localStorage.setItem('licenseData', JSON.stringify(data)); }
     function isLicenseValid() {
         const lic = getLicenseData();
         if (!lic) return false;
@@ -191,7 +188,6 @@
         expiryDate.setDate(expiryDate.getDate() + durationDays);
         return now <= expiryDate;
     }
-
     function getRemainingDays() {
         const lic = getLicenseData();
         if (!lic) return 0;
@@ -203,8 +199,6 @@
         const diff = expiryDate - now;
         return Math.ceil(diff / (1000 * 60 * 60 * 24));
     }
-
-    // التحقق من الكود الجديد (يدعم salt)
     function verifyCode(code) {
         if (!code || code.length < 24) return false;
         try {
@@ -213,8 +207,6 @@
             const hashPart = code.substring(8);
             const days = parseInt(daysPart, 36);
             if (isNaN(days) || days <= 0) return false;
-
-            // إعادة بناء الهاش باستخدام المفتاح والملح
             const combined = days + "|" + MASTER_KEY + "|" + salt;
             let hash = 0;
             for (let i = 0; i < combined.length; i++) {
@@ -229,61 +221,36 @@
             return hashPart === expectedHash ? days : false;
         } catch (e) { return false; }
     }
-
     function activateLicense() {
         const code = document.getElementById('activationCode').value.trim();
         if (!code) { document.getElementById('activationError').innerText = "أدخل الكود"; return; }
         const days = verifyCode(code);
         if (!days) { document.getElementById('activationError').innerText = "كود غير صالح"; return; }
-
-        saveLicenseData({
-            activationDate: new Date().toISOString(),
-            durationDays: days
-        });
-
+        saveLicenseData({ activationDate: new Date().toISOString(), durationDays: days });
         document.getElementById('lockScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
-        updateDaysCounter();
-        updateButtons();
+        updateDaysCounter(); updateButtons();
         alert(`✅ تم تفعيل الترخيص لمدة ${days} يوم.`);
     }
-
     function renewLicense() {
         const code = document.getElementById('renewalCode').value.trim();
         const msg = document.getElementById('renewalMsg');
         if (!code) { msg.innerText = "أدخل الكود"; return; }
         const days = verifyCode(code);
         if (!days) { msg.innerText = "كود غير صالح"; return; }
-
-        saveLicenseData({
-            activationDate: new Date().toISOString(),
-            durationDays: days
-        });
-        msg.innerText = `✅ تم التجديد لمدة ${days} يوم.`;
-        document.getElementById('renewalCode').value = "";
-        updateDaysCounter();
-        updateButtons();
+        saveLicenseData({ activationDate: new Date().toISOString(), durationDays: days });
+        msg.innerText = `✅ تم التجديد لمدة ${days} يوم.`; document.getElementById('renewalCode').value = "";
+        updateDaysCounter(); updateButtons();
         alert("تم تجديد الترخيص بنجاح!");
     }
-
     function updateDaysCounter() {
         const counter = document.getElementById('daysCounter');
-        if (!isLicenseValid()) {
-            counter.innerText = "انتهى الاشتراك";
-            counter.style.background = "rgba(239, 68, 68, 0.8)";
-        } else {
-            const remaining = getRemainingDays();
-            counter.innerText = `متبقي ${remaining} يوم`;
-            counter.style.background = "rgba(255,255,255,0.15)";
-        }
+        if (!isLicenseValid()) { counter.innerText = "انتهى الاشتراك"; counter.style.background = "rgba(239, 68, 68, 0.8)"; }
+        else { const remaining = getRemainingDays(); counter.innerText = `متبقي ${remaining} يوم`; counter.style.background = "rgba(255,255,255,0.15)"; }
     }
-
     function updateButtons() {
         const valid = isLicenseValid();
-        document.querySelectorAll('.btn-enc, .btn-dec, .btn-warning').forEach(btn => {
-            btn.disabled = !valid;
-            btn.style.opacity = valid ? '1' : '0.5';
-        });
+        document.querySelectorAll('.btn-enc, .btn-dec, .btn-warning').forEach(btn => { btn.disabled = !valid; btn.style.opacity = valid ? '1' : '0.5'; });
     }
 
     // ====================== دوال مساعدة ======================
@@ -293,7 +260,6 @@
         document.getElementById(id).value = p;
     }
     function generateSalt() { return Math.floor(1000 + Math.random() * 9000).toString(); }
-
     function copyResult() {
         const t = document.getElementById('resultOutput').innerText;
         if (!t || t === "النتيجة تظهر هنا...") return;
@@ -303,15 +269,11 @@
 
     // ====================== تشفير النصوص ======================
     function processText(isEnc, expiryMinutes = null) {
-        if (!isLicenseValid()) {
-            alert("انتهى اشتراكك. تواصل مع الدعم للتجديد.");
-            return;
-        }
+        if (!isLicenseValid()) { alert("انتهى اشتراكك. تواصل مع الدعم للتجديد."); return; }
         const text = document.getElementById('textInput').value;
         const key = document.getElementById('keyInput').value.trim();
         const out = document.getElementById('resultOutput');
         if (!key) { alert("أدخل المفتاح!"); return; }
-
         if (isEnc) {
             if (text.length === 0) { alert("اكتب نصاً."); return; }
             let payload = text;
@@ -357,7 +319,6 @@
         }
         clearTimer();
     }
-
     function selfDestruct() {
         const key = document.getElementById('keyInput').value.trim();
         if (!key) { alert("أدخل المفتاح!"); return; }
@@ -381,7 +342,6 @@
         tick();
         selfDestructTimer = setInterval(tick, 1000);
     }
-
     function clearTimer() {
         if (selfDestructTimer) { clearInterval(selfDestructTimer); selfDestructTimer = null; }
         document.getElementById('timerDisplay').style.display = 'none';
@@ -442,41 +402,44 @@
         } catch (e) { alert("❌ خطأ."); document.getElementById('fileResult').innerText = "❌ فشل."; }
     }
 
-    // ====================== المصافحة ======================
+    // ====================== المصافحة الآمنة ======================
     function rand() { return Math.floor(Math.random() * 10000) + 1000; }
     function computePublic(b, s) { return (b + s) % N; }
     function computeShared(p, s) { return (p + s) % N; }
+    
     function startHandshake() {
         secretA = rand(); baseV = rand();
         document.getElementById('baseCode').value = baseV;
         document.getElementById('publicA').value = computePublic(baseV, secretA);
-        document.getElementById('handshakeStatus').innerText = "✅ أرسل Base + Public A.";
+        document.getElementById('handshakeStatus').innerText = "✅ أرسل Base + Public A لصديقك.";
     }
+    
     function joinHandshake() {
         const base = parseInt(document.getElementById('baseCode').value);
         const pubA = parseInt(document.getElementById('publicA').value);
         if (isNaN(base) || isNaN(pubA)) { alert("أدخل Base و Public A!"); return; }
-        secretB = rand(); const pubB = computePublic(base, secretB);
+        secretB = rand();
+        const pubB = computePublic(base, secretB);
+        const sharedKey = computeShared(pubA, secretB);
+        
         document.getElementById('publicB').value = pubB;
-        document.getElementById('keyInput').value = computeShared(pubA, secretB);
-        document.getElementById('handshakeStatus').innerText = "✅ تم. المفتاح في النصوص.";
+        document.getElementById('keyInput').value = sharedKey;
+        document.getElementById('handshakeStatus').innerText = "✅ تم الاتصال! المفتاح نُقل تلقائياً إلى تبويب النصوص.";
+        alert("✅ تم الاتصال ونقل المفتاح بنجاح.");
     }
+    
     function confirmKey() {
-        if (secretA === null || baseV === null) { alert("ابدأ المصافحة!"); return; }
+        if (secretA === null || baseV === null) { alert("ابدأ المصافحة أولاً!"); return; }
         const pubB = parseInt(document.getElementById('publicB').value);
         if (isNaN(pubB)) { alert("أدخل Public B!"); return; }
-        document.getElementById('keyInput').value = computeShared(pubB, secretA);
-        document.getElementById('handshakeStatus').innerText = "🎉 تم التأكيد!";
+        const sharedKey = computeShared(pubB, secretA);
+        
+        document.getElementById('keyInput').value = sharedKey;
+        document.getElementById('handshakeStatus').innerText = "🎉 تم التأكيد! المفتاح نُقل تلقائياً إلى تبويب النصوص.";
+        alert("✅ تم التأكيد ونقل المفتاح بنجاح.");
     }
 
-    function switchTab(name) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        document.getElementById('tab-' + name).classList.add('active');
-        event.target.classList.add('active');
-    }
-
-    // ====================== كلمة السر ======================
+    // ====================== كلمة السر والإعدادات ======================
     function loadMasterPassword() {
         const encrypted = localStorage.getItem('encryptedMasterPassword');
         if (!encrypted) return "1234";
@@ -490,7 +453,6 @@
             return dec;
         } catch (e) { return "1234"; }
     }
-
     function saveMasterPassword(password) {
         let enc = "";
         for (let i = 0; i < password.length; i++) {
@@ -500,9 +462,7 @@
         }
         localStorage.setItem('encryptedMasterPassword', enc);
     }
-
     masterPassword = loadMasterPassword();
-
     function changeMasterPassword() {
         const newPass = document.getElementById('newPassword').value;
         const confirmPass = document.getElementById('confirmPassword').value;
@@ -516,11 +476,18 @@
         clearPasswordFields();
         setTimeout(() => { msg.innerText = ""; }, 3000);
     }
-
     function clearPasswordFields() {
         document.getElementById('newPassword').value = "";
         document.getElementById('confirmPassword').value = "";
         document.getElementById('settingsMsg').innerText = "";
+    }
+
+    // ====================== التبويبات ======================
+    function switchTab(name) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        event.target.classList.add('active');
     }
 
     // ====================== بدء التشغيل ======================
@@ -532,11 +499,8 @@
         } else {
             document.getElementById('lockScreen').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
-            updateDaysCounter();
-            updateButtons();
-            if (!isLicenseValid()) {
-                alert("انتهى اشتراكك. تواصل مع الدعم للتجديد.");
-            }
+            updateDaysCounter(); updateButtons();
+            if (!isLicenseValid()) { alert("انتهى اشتراكك. تواصل مع الدعم للتجديد."); }
         }
     };
 </script>
