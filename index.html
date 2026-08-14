@@ -192,7 +192,6 @@
         if (!lic) return false;
         const now = new Date();
         const expiryDate = new Date(lic.expiryDate);
-        // تحقق من بصمة الجهاز
         if (lic.fingerprint !== getDeviceFingerprint()) return false;
         return now <= expiryDate;
     }
@@ -206,7 +205,6 @@
         return Math.ceil(diff / (1000 * 60 * 60 * 24));
     }
 
-    // التحقق من الكود محلياً (بدون إنترنت)
     function verifyCode(code) {
         if (!code || code.length < 24) return false;
         try {
@@ -300,7 +298,7 @@
         let p = ""; for (let i = 0; i < 16; i++) p += chars[Math.floor(Math.random() * chars.length)];
         document.getElementById(id).value = p;
     }
-    function generateSalt() { return Math.floor(1000 + Math.random() * 9000).toString(); }
+
     function copyResult() {
         const t = document.getElementById('resultOutput').innerText;
         if (!t || t === "النتيجة تظهر هنا...") return;
@@ -308,58 +306,84 @@
         else alert("انسخ يدوياً: " + t);
     }
 
-    // ====================== تشفير النصوص ======================
+    // ====================== تشفير النصوص (بدون salt + ضغط رقمي) ======================
     function processText(isEnc, expiryMinutes = null) {
-        if (!isLicenseValid()) { alert("انتهى اشتراكك. تواصل مع الدعم للتجديد."); return; }
+        if (!isLicenseValid()) {
+            alert("انتهى اشتراكك. تواصل مع الدعم للتجديد.");
+            return;
+        }
         const text = document.getElementById('textInput').value;
         const key = document.getElementById('keyInput').value.trim();
         const out = document.getElementById('resultOutput');
-        if (!key) { alert("أدخل المفتاح!"); return; }
+        if (!key) {
+            alert("أدخل المفتاح!");
+            return;
+        }
+
         if (isEnc) {
-            if (text.length === 0) { alert("اكتب نصاً."); return; }
+            if (text.length === 0) {
+                alert("اكتب نصاً.");
+                return;
+            }
             let payload = text;
             if (expiryMinutes && expiryMinutes > 0) {
                 const expiryTime = new Date(Date.now() + expiryMinutes * 60 * 1000);
                 const timestamp = expiryTime.getTime().toString();
                 payload = "EXPIRES:" + timestamp + "|" + text;
             }
-            const salt = generateSalt();
-            const full = salt + payload;
-            let res = []; let ki = 0;
-            for (let c of full) {
-                let cp = alphabet.indexOf(c); if (cp === -1) cp = 0;
-                let kp = alphabet.indexOf(key[ki % key.length]); if (kp === -1) kp = 1;
-                res.push(((cp + kp) % N) + 1); ki++;
+
+            const encryptedIndices = [];
+            let ki = 0;
+            for (let c of payload) {
+                let cp = alphabet.indexOf(c);
+                if (cp === -1) cp = 0;
+                let kp = alphabet.indexOf(key[ki % key.length]);
+                if (kp === -1) kp = 1;
+                encryptedIndices.push((cp + kp) % N);
+                ki++;
             }
-            out.innerText = res.join("-");
+
+            encryptedIndices.unshift(1); // للحفاظ على الأصفار البادئة
+
+            const Nbig = BigInt(N);
+            let big = 0n;
+            for (let val of encryptedIndices) {
+                big = big * Nbig + BigInt(val);
+            }
+
+            out.innerText = big.toString(); // أرقام فقط
         } else {
-            let parts = text.trim().split("-");
-            let o = ""; let ki = 0;
-            for (let p of parts) {
-                let num = parseInt(p);
-                if (!isNaN(num) && num > 0) {
-                    let cp = num - 1;
-                    let kp = alphabet.indexOf(key[ki % key.length]); if (kp === -1) kp = 1;
-                    o += alphabet[((cp - kp + N) % N)]; ki++;
-                } else o += " ";
-            }
-            if (o.trim() === "") { alert("نص غير مشفر."); return; }
-            o = o.length >= 4 ? o.substring(4) : "خطأ";
-            if (o.startsWith("EXPIRES:")) {
-                const parts = o.split("|");
-                if (parts.length >= 2) {
-                    const timestamp = parseInt(parts[0].substring(8));
-                    if (!isNaN(timestamp) && Date.now() > timestamp) {
-                        out.innerText = "⏳ انتهت صلاحية هذه الرسالة.";
-                        return;
-                    }
-                    o = parts.slice(1).join("|");
+            let decrypted = "";
+            let encryptedIndices = [];
+
+            try {
+                const Nbig = BigInt(N);
+                let big = BigInt(text.trim());
+                const digits = [];
+                while (big > 0n) {
+                    digits.unshift(Number(big % Nbig));
+                    big /= Nbig;
                 }
+                digits.shift(); // إزالة الرقم الأول المضاف (1)
+                encryptedIndices = digits;
+            } catch (e) {
+                alert("نص غير مشفر أو تالف.");
+                return;
             }
-            out.innerText = o;
+
+            let ki = 0;
+            for (let val of encryptedIndices) {
+                let kp = alphabet.indexOf(key[ki % key.length]);
+                if (kp === -1) kp = 1;
+                decrypted += alphabet[((val - kp + N) % N)];
+                ki++;
+            }
+
+            out.innerText = decrypted;
         }
         clearTimer();
     }
+
     function selfDestruct() {
         const key = document.getElementById('keyInput').value.trim();
         if (!key) { alert("أدخل المفتاح!"); return; }
