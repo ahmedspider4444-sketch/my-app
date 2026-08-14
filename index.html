@@ -156,12 +156,9 @@
 
 <script>
     // ====================== الإعدادات ======================
-    // الأبجدية الأساسية (بدون مسافة) - الحروف العربية الأساسية + الأرقام
-    const alphabet = "أبتثجحخدذرزسشصضطظعغفقكلمنهويةءىة0123456789";
-    const N = alphabet.length; // 42 حرفاً تقريباً
-    // أبجدية موسعة للتدمير الذاتي (تتضمن المسافة)
-    const alphabetWithSpace = " " + alphabet;
-    const NS = alphabetWithSpace.length;
+    // الأبجدية العربية بعد دمج "ي" و"ى" في "ي" فقط
+    const alphabet = "أإآبتثجحخدذرزسشصضطظعغفقكلمنهويءئؤة";
+    const N = alphabet.length; // 34
 
     const MASTER_KEY = "MySecretKey2024!@#$"; // غيّره إلى مفتاحك السري
     let masterPassword = "1234";
@@ -311,58 +308,42 @@
         else alert("انسخ يدوياً: " + t);
     }
 
-    // ====================== تشفير كلمة واحدة ======================
-    function encryptWord(word, key, useSpaceAlphabet = false) {
-        const currentAlphabet = useSpaceAlphabet ? alphabetWithSpace : alphabet;
-        const currentN = useSpaceAlphabet ? NS : N;
-        const indices = [];
+    // ====================== تشفير كلمة واحدة (طريقة مبسطة: زوجان رقميان لكل حرف) ======================
+    function encryptWord(word, key) {
+        let result = "";
         let ki = 0;
         for (let c of word) {
-            let cp = currentAlphabet.indexOf(c);
-            if (cp === -1) cp = 0; // أي حرف غير موجود يتحول لأول حرف (مسافة إذا كانت الأبجدية موسعة، أو ألف)
-            let kp = currentAlphabet.indexOf(key[ki % key.length]);
+            // نستبدل "ى" بـ "ي" قبل التشفير
+            if (c === "ى") c = "ي";
+            let cp = alphabet.indexOf(c);
+            if (cp === -1) cp = 0; // حرف غير موجود يتحول إلى "أ"
+            let kp = alphabet.indexOf(key[ki % key.length]);
             if (kp === -1) kp = 1;
-            indices.push((cp + kp) % currentN);
+            let val = (cp + kp) % N;
+            result += val.toString().padStart(2, '0'); // رقمين عشريين
             ki++;
         }
-        indices.unshift(1); // للحفاظ على الأصفار البادئة
-        const Nbig = BigInt(currentN);
-        let big = 0n;
-        for (let val of indices) {
-            big = big * Nbig + BigInt(val);
-        }
-        return big.toString();
+        return result;
     }
 
-    function decryptWord(encryptedStr, key, useSpaceAlphabet = false) {
-        const currentAlphabet = useSpaceAlphabet ? alphabetWithSpace : alphabet;
-        const currentN = useSpaceAlphabet ? NS : N;
-        const Nbig = BigInt(currentN);
-        let big;
-        try {
-            big = BigInt(encryptedStr);
-        } catch (e) {
-            return null;
-        }
-        const digits = [];
-        while (big > 0n) {
-            digits.unshift(Number(big % Nbig));
-            big /= Nbig;
-        }
-        if (digits.length === 0) return "";
-        digits.shift(); // إزالة الرقم الأول (1)
+    function decryptWord(encryptedStr, key) {
+        if (encryptedStr.length % 2 !== 0) return null;
         let decrypted = "";
         let ki = 0;
-        for (let val of digits) {
-            let kp = currentAlphabet.indexOf(key[ki % key.length]);
+        for (let i = 0; i < encryptedStr.length; i += 2) {
+            const pair = encryptedStr.substring(i, i + 2);
+            const val = parseInt(pair, 10);
+            if (isNaN(val) || val < 0 || val >= N) return null;
+            let kp = alphabet.indexOf(key[ki % key.length]);
             if (kp === -1) kp = 1;
-            decrypted += currentAlphabet[((val - kp + currentN) % currentN)];
+            let idx = (val - kp + N) % N;
+            decrypted += alphabet[idx];
             ki++;
         }
         return decrypted;
     }
 
-    // ====================== تشفير النصوص (الطريقة الجديدة) ======================
+    // ====================== تشفير النصوص ======================
     function processText(isEnc, expiryMinutes = null) {
         if (!isLicenseValid()) {
             alert("انتهى اشتراكك. تواصل مع الدعم للتجديد.");
@@ -382,34 +363,32 @@
                 return;
             }
 
-            // التدمير الذاتي: يستخدم أبجدية موسعة (مع مسافة) ويدمج النص كاملاً مع الطابع الزمني
             if (expiryMinutes && expiryMinutes > 0) {
+                // التدمير الذاتي: نضيف طابعًا زمنيًا ونشفر النص كاملاً كوحدة واحدة
                 const expiryTime = new Date(Date.now() + expiryMinutes * 60 * 1000);
                 const timestamp = expiryTime.getTime().toString();
                 const payload = "EXPIRES:" + timestamp + "|" + text;
-                const encrypted = encryptWord(payload, key, true); // useSpaceAlphabet = true
-                // نضيف "9" كعلامة للتدمير الذاتي
-                out.innerText = "9" + encrypted;
+                const sanitized = payload.replace(/ /g, "_"); // استبدال المسافات بشرطة سفلية
+                const encrypted = encryptWord(sanitized, key);
+                out.innerText = "9" + encrypted; // علامة 9 للتدمير الذاتي
             } else {
-                // تشفير عادي: تقسيم النص إلى كلمات وتشفير كل كلمة على حدة
                 const words = text.split(/\s+/).filter(w => w.length > 0);
-                const encryptedWords = words.map(w => encryptWord(w, key, false));
+                const encryptedWords = words.map(w => encryptWord(w, key));
                 out.innerText = encryptedWords.join(' ');
             }
         } else {
             const trimmed = text.trim();
-            // فك التشفير
             if (trimmed.startsWith("9")) {
-                // تدمير ذاتي
+                // فك تشفير التدمير الذاتي
                 const encryptedPart = trimmed.substring(1);
-                const decrypted = decryptWord(encryptedPart, key, true);
+                const decrypted = decryptWord(encryptedPart, key);
                 if (decrypted === null) {
                     alert("نص غير مشفر أو تالف.");
                     return;
                 }
-                // معالجة الطابع الزمني
-                if (decrypted.startsWith("EXPIRES:")) {
-                    const expParts = decrypted.split("|");
+                const withSpaces = decrypted.replace(/_/g, " ");
+                if (withSpaces.startsWith("EXPIRES:")) {
+                    const expParts = withSpaces.split("|");
                     if (expParts.length >= 2) {
                         const timestamp = parseInt(expParts[0].substring(8));
                         if (!isNaN(timestamp) && Date.now() > timestamp) {
@@ -420,13 +399,12 @@
                         return;
                     }
                 }
-                out.innerText = decrypted;
+                out.innerText = withSpaces;
             } else if (trimmed.includes(" ")) {
-                // تشفير عادي متعدد الكلمات
                 const encryptedWords = trimmed.split(/\s+/);
                 const decryptedWords = [];
                 for (let w of encryptedWords) {
-                    const dec = decryptWord(w, key, false);
+                    const dec = decryptWord(w, key);
                     if (dec === null) {
                         alert("نص غير مشفر أو تالف.");
                         return;
@@ -435,8 +413,7 @@
                 }
                 out.innerText = decryptedWords.join(' ');
             } else {
-                // كلمة واحدة فقط (بدون مسافات)
-                const dec = decryptWord(trimmed, key, false);
+                const dec = decryptWord(trimmed, key);
                 if (dec === null) {
                     alert("نص غير مشفر أو تالف.");
                     return;
